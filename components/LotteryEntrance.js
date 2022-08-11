@@ -1,20 +1,19 @@
-import { useWeb3Contract } from "react-moralis";
+import { useMoralis, useWeb3Contract } from "react-moralis";
 import { abi, contractAddresses } from "../constants";
-import { useMoralis } from "react-moralis";
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { useNotification } from "web3uikit";
 
 export default function LotteryEntrance() {
-  const { chainId: chainIdHex, isWeb3Enabled } = useMoralis();
+  const { chainId: chainIdHex, isWeb3Enabled, Moralis } = useMoralis();
   const chainId = parseInt(chainIdHex);
   const raffleAddress = chainId in contractAddresses ? contractAddresses[chainId][0] : null;
   const [entranceFee, setEntranceFee] = useState("0");
   const [numberOfPlayers, setNumberOfPlayers] = useState("0");
   const [recentWinner, setRecentWinner] = useState("0");
+  const [provider, setProvider] = useState();
 
   const dispatch = useNotification();
-  let startTime;
 
   const {
     runContractFunction: enterRaffle,
@@ -58,16 +57,28 @@ export default function LotteryEntrance() {
     setRecentWinner(recentWinnerFromCall);
   }
 
+  Moralis.onWeb3Enabled((provider) => {
+    setProvider(provider);
+  });
+
   useEffect(() => {
     if (isWeb3Enabled) {
       updateUI();
+
+      const raffleContract = new ethers.Contract(raffleAddress, abi, provider.web3);
+      raffleContract.on("WinnerPicked", async (winner) => {
+        updateUI();
+      });
     }
   }, [isWeb3Enabled]);
 
   const handleSuccess = async function (tx) {
-    await tx.wait(1);
-    handleNewNotification(tx);
-    updateUI();
+    const raffleContract = new ethers.Contract(raffleAddress, abi, provider.web3);
+    const txReceipt = await tx.wait(1);
+    if (txReceipt.events[0] !== "undefined") {
+      handleNewNotification();
+      updateUI();
+    }
   };
 
   const handleNewNotification = function () {
