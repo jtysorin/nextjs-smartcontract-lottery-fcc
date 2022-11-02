@@ -26,9 +26,6 @@ IPFS.
 - [Linting](#linting)
 - [Thank you!](#thank-you)
 
-This project is a part of the Hardhat FreeCodeCamp video.
-
-Video coming soon...
 
 # Getting Started
 
